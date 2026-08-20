@@ -18,3 +18,12 @@ def publish_background_removal(
     )
 
     return task.id
+
+
+def publish_garment_background_removal(garment_id: str) -> str:
+    task = celery_client.send_task(
+        "garment.remove_background",
+        kwargs={"garment_id": garment_id},
+        queue="preprocessing",
+    )
+    return task.id

@@ -34,7 +34,7 @@ import {api} from "../api/client";
 type User={username:string;role:string;email?:string};
 type ImageStatus="uploaded"|"background_removal"|"ready"|"failed"|"deleted";
 type ImageItem={id:string;width:number;height:number;status:ImageStatus;background_removed:boolean;has_preview:boolean;error_code?:string|null;created_at:string};
-type Garment={id:string;name:string;category:string;image_key?:string;image_url?:string|null;active?:boolean};
+type Garment={id:string;name:string;category:string;image_key?:string;image_url?:string|null;status?:string;background_removed?:boolean;active?:boolean};
 type AccessoryItem={id:string; name:string; category?:string; imageUrl?:string; image_url?:string | null};
 type Job={id:string;status:string;progress:number;has_result:boolean;garment_id:string};
 type MirrorView="base"|"result";
@@ -169,7 +169,8 @@ export default function MirrorDashboard({user}:{user:User}){
   
   const garments=useQuery({
     queryKey:["garments"],
-    queryFn:()=>api.get<Garment[]>("/garments").then(r=>r.data)
+    queryFn:()=>api.get<Garment[]>("/garments").then(r=>r.data),
+    refetchInterval:q=>q.state.data?.some(g=>g.status==="uploaded"||g.status==="background_removal")?1500:false
   });
   
   const accessories=useQuery({

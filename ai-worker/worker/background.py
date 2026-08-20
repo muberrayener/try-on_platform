@@ -9,6 +9,7 @@ from rembg import new_session, remove
 background_session = new_session(
     "u2net_human_seg",
 )
+garment_session = new_session("u2net")
 
 
 def remove_person_background(
@@ -42,6 +43,24 @@ def remove_person_background(
         optimize=True,
     )
 
+    return buffer.getvalue()
+
+
+def remove_garment_background(image_bytes: bytes) -> bytes:
+    source = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+    output = remove(
+        source,
+        session=garment_session,
+        alpha_matting=True,
+        alpha_matting_foreground_threshold=240,
+        alpha_matting_background_threshold=10,
+        alpha_matting_erode_size=10,
+    )
+    if not isinstance(output, Image.Image):
+        output = Image.open(io.BytesIO(output))
+    output = output.convert("RGBA")
+    buffer = io.BytesIO()
+    output.save(buffer, format="PNG", optimize=True)
     return buffer.getvalue()
 
 

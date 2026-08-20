@@ -7,6 +7,7 @@ from app.api.v1.router import router
 from app.core.config import settings
 from app.core.database import db, client
 from app.core.security import password_hash
+from app.services.tasks import publish_garment_background_removal
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -14,6 +15,30 @@ async def lifespan(app: FastAPI):
     await db.users.create_index([("email_normalized", ASCENDING)], unique=True)
     await db.action_tokens.create_index("expires_at", expireAfterSeconds=0)
     await db.tryon_jobs.create_index([("user_id", ASCENDING), ("created_at", ASCENDING)])
+    async for garment in db.garments.find({
+        "active": True,
+        "image_key": {"$exists": True, "$ne": "pending"},
+        "$or": [
+            {"cutout_key": {"$exists": False}},
+            {"cutout_key": None},
+        ],
+        "status": {"$nin": ["uploaded", "background_removal", "ready"]},
+    }):
+        await db.garments.update_one(
+            {"_id": garment["_id"]},
+            {"$set": {"status": "uploaded", "background_removed": False}},
+        )
+        try:
+            task_id = publish_garment_background_removal(str(garment["_id"]))
+            await db.garments.update_one(
+                {"_id": garment["_id"]},
+                {"$set": {"background_task_id": task_id}},
+            )
+        except Exception:
+            await db.garments.update_one(
+                {"_id": garment["_id"]},
+                {"$set": {"status": "failed", "error_code": "BACKGROUND_ENQUEUE_FAILED"}},
+            )
     if not await db.users.find_one({"email_normalized": settings.admin_email.lower()}):
         await db.users.insert_one({"username": settings.admin_username, "username_normalized": settings.admin_username.lower(),
             "email": settings.admin_email, "email_normalized": settings.admin_email.lower(),
