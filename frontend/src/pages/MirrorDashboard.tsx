@@ -89,6 +89,7 @@ export default function MirrorDashboard({user}:{user:User}){
   const[adminOpen,setAdminOpen]=useState(false);
   const[wardrobeTab,setWardrobeTab]=useState<"list"|"add">("list");
   const[accessoryOpen,setAccessoryOpen]=useState(false);
+  const[accessoryTab,setAccessoryTab]=useState<"list"|"add">("list");
   const[accessoryItems,setAccessoryItems]=useState<AccessoryItem[]>([]);
   const[accessoryName,setAccessoryName]=useState("Yeni aksesuar");
   const[accessoryCategory,setAccessoryCategory]=useState("other");
@@ -499,7 +500,7 @@ export default function MirrorDashboard({user}:{user:User}){
                   type="button"
                   className="diamond-open-btn"
                   title="Aksesuar Galerisi"
-                  onClick={()=>setAccessoryOpen(true)}
+                  onClick={()=>{setAccessoryTab("list");setAccessoryOpen(true)}}
                 >
                   <Gem size={14} className="header-icon" />
                 </button>
@@ -737,11 +738,18 @@ export default function MirrorDashboard({user}:{user:User}){
             <h2>Aksesuar Galerisi</h2>
 
             <div className="auth-tabs" style={{marginBottom: 16}}>
-              <button type="button" className="auth-tab active">Listem ({accessoryItems.length})</button>
               <button
                 type="button"
-                className="auth-tab"
+                className={`auth-tab ${accessoryTab === "list" ? "active" : ""}`}
+                onClick={()=>setAccessoryTab("list")}
+              >
+                Listem ({accessoryItems.length})
+              </button>
+              <button
+                type="button"
+                className={`auth-tab ${accessoryTab === "add" ? "active" : ""}`}
                 onClick={()=>{
+                  setAccessoryTab("add");
                   setAccessoryName("Yeni aksesuar");
                   setAccessoryCategory("other");
                   setAccessoryFile(undefined);
@@ -754,7 +762,7 @@ export default function MirrorDashboard({user}:{user:User}){
               </button>
             </div>
 
-            {accessoryItems.length > 0 ? (
+            {accessoryTab === "list" && accessoryItems.length > 0 ? (
               <div className="wardrobe-items-manager">
                 <div className="wardrobe-mgmt-list">
                   {accessoryItems.map(item => (
@@ -780,7 +788,7 @@ export default function MirrorDashboard({user}:{user:User}){
                   ))}
                 </div>
               </div>
-            ) : (
+            ) : accessoryTab === "list" ? (
               <div className="wardrobe-mgmt-empty">
                 <p>Henüz aksesuarınız yok.</p>
                 <button
@@ -788,6 +796,7 @@ export default function MirrorDashboard({user}:{user:User}){
                   className="glass-action-btn"
                   style={{marginTop: 10}}
                   onClick={()=>{
+                    setAccessoryTab("add");
                     setAccessoryName("Yeni aksesuar");
                     setAccessoryFile(undefined);
                     setAccessoryPreviewUrl(null);
@@ -797,9 +806,8 @@ export default function MirrorDashboard({user}:{user:User}){
                   İlk Aksesuarını Ekle
                 </button>
               </div>
-            )}
-
-            <div className="accessory-add-form" style={{marginTop: 12}}>
+            ) : (
+              <div className="accessory-add-form" style={{marginTop: 12}}>
               <label>
                 Aksesuar Adı
                 <input
@@ -868,7 +876,8 @@ export default function MirrorDashboard({user}:{user:User}){
               >
                 Aksesuarı Ekle
               </button>
-            </div>
+              </div>
+            )}
           </div>
         </div>
       )}
