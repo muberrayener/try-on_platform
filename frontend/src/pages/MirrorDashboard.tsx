@@ -14,6 +14,7 @@ import {
   CloudLightning,
   Eye,
   Heart,
+  Loader2,
   LogOut,
   Mic,
   MoreVertical,
@@ -34,6 +35,7 @@ type User={username:string;role:string;email?:string};
 type ImageStatus="uploaded"|"background_removal"|"ready"|"failed"|"deleted";
 type ImageItem={id:string;width:number;height:number;status:ImageStatus;background_removed:boolean;has_preview:boolean;error_code?:string|null;created_at:string};
 type Garment={id:string;name:string;category:string;image_key?:string;image_url?:string|null;active?:boolean};
+type AccessoryItem={id:string; name:string; category?:string; imageUrl?:string; image_url?:string | null};
 type Job={id:string;status:string;progress:number;has_result:boolean;garment_id:string};
 type MirrorView="base"|"result";
 type WeatherInfo={temp:number;code:number;isDay:number};
@@ -43,6 +45,15 @@ const categoryName:Record<string,string>={
   lower_body:"Alt giyim",
   dress:"Elbise",
   kombin:"Kombin"
+};
+
+const accessoryCategoryName:Record<string,string>={
+  earrings:"Küpe",
+  necklace:"Kolye",
+  bracelet:"Bileklik",
+  watch:"Saat",
+  ring:"Yüzük",
+  other:"Diğer"
 };
 
 const lipstickShades = [
@@ -70,11 +81,20 @@ export default function MirrorDashboard({user}:{user:User}){
   
   const[person,setPerson]=useState<File>();
   const[garmentFile,setGarmentFile]=useState<File>();
+  const[garmentPreviewUrl,setGarmentPreviewUrl]=useState<string | null>(null);
+  const[garmentUploading,setGarmentUploading]=useState(false);
   const[garmentName,setGarmentName]=useState("Yeni parça");
   const[category,setCategory]=useState("upper_body");
   const[selectedGarment,setSelectedGarment]=useState("");
   const[adminOpen,setAdminOpen]=useState(false);
   const[wardrobeTab,setWardrobeTab]=useState<"list"|"add">("list");
+  const[accessoryOpen,setAccessoryOpen]=useState(false);
+  const[accessoryItems,setAccessoryItems]=useState<AccessoryItem[]>([]);
+  const[accessoryName,setAccessoryName]=useState("Yeni aksesuar");
+  const[accessoryCategory,setAccessoryCategory]=useState("other");
+  const[accessoryFile,setAccessoryFile]=useState<File>();
+  const[accessoryPreviewUrl,setAccessoryPreviewUrl]=useState<string | null>(null);
+  const[accessoryInput,setAccessoryInput]=useState<HTMLInputElement | null>(null);
   const[profileOpen,setProfileOpen]=useState(false);
   const[uiError,setUiError]=useState("");
   const[uiSuccess,setUiSuccess]=useState("");
@@ -82,12 +102,31 @@ export default function MirrorDashboard({user}:{user:User}){
   const[selectedShade,setSelectedShade]=useState("3");
   const[appliedShade,setAppliedShade]=useState<string|null>(null);
 
+  function normalizeAccessory(item: AccessoryItem): AccessoryItem {
+    return {
+      ...item,
+      category: item.category ?? "other",
+      imageUrl: item.imageUrl ?? item.image_url ?? ""
+    };
+  }
+
   // Canlı Saat & Tarih
   const[currentTime,setCurrentTime]=useState(new Date());
   useEffect(()=>{
     const clock = setInterval(()=>setCurrentTime(new Date()), 1000);
     return ()=>clearInterval(clock);
   },[]);
+
+  useEffect(()=>{
+    return () => {
+      if(garmentPreviewUrl){
+        URL.revokeObjectURL(garmentPreviewUrl);
+      }
+      if(accessoryPreviewUrl){
+        URL.revokeObjectURL(accessoryPreviewUrl);
+      }
+    };
+  }, [garmentPreviewUrl, accessoryPreviewUrl]);
 
   // Canlı Hava Durumu (Open-Meteo)
   const[weather,setWeather]=useState<WeatherInfo>({temp:22, code:1, isDay:1});
@@ -132,6 +171,17 @@ export default function MirrorDashboard({user}:{user:User}){
     queryFn:()=>api.get<Garment[]>("/garments").then(r=>r.data)
   });
   
+  const accessories=useQuery({
+    queryKey:["accessories"],
+    queryFn:()=>api.get<AccessoryItem[]>("/accessories").then(r=>r.data.map(normalizeAccessory))
+  });
+
+  useEffect(()=>{
+    if(accessories.data){
+      setAccessoryItems(accessories.data);
+    }
+  }, [accessories.data]);
+
   const jobs=useQuery({
     queryKey:["jobs"],
     queryFn:()=>api.get<Job[]>("/tryons").then(r=>r.data),
@@ -142,6 +192,11 @@ export default function MirrorDashboard({user}:{user:User}){
     ()=>[...(images.data??[])].filter(i=>i.status==="ready"&&i.background_removed&&i.has_preview).sort((a,b)=>new Date(b.created_at).getTime()-new Date(a.created_at).getTime()),
     [images.data]
   );
+
+  const visibleGarments=useMemo(
+    ()=>[...(garments.data ?? [])].filter(g => !!g.image_url),
+    [garments.data]
+  );
   
   const basePersonImage=readyImages[0];
   const processingImage=images.data?.find(i=>i.status==="uploaded"||i.status==="background_removal");
@@ -149,10 +204,16 @@ export default function MirrorDashboard({user}:{user:User}){
   const activeJob=jobs.data?.[0];
 
   useEffect(()=>{
-    if(!selectedGarment&&garments.data?.[0]){
-      setSelectedGarment(garments.data[0].id);
+    if(!visibleGarments.length){
+      setSelectedGarment("");
+      return;
     }
-  },[garments.data,selectedGarment]);
+
+    const hasSelected = visibleGarments.some(g => g.id === selectedGarment);
+    if(!selectedGarment || !hasSelected){
+      setSelectedGarment(visibleGarments[0].id);
+    }
+  },[visibleGarments,selectedGarment]);
 
   useEffect(()=>{
     if(activeJob?.status==="completed"&&activeJob.has_result){
@@ -180,7 +241,12 @@ export default function MirrorDashboard({user}:{user:User}){
 
   async function addGarment(e:FormEvent<HTMLFormElement>){
     e.preventDefault();
-    if(!garmentFile)return;
+    if(!garmentFile){
+      setUiError("Ürün görseli seçmeden kıyafet eklenemez.");
+      setTimeout(()=>setUiError(""), 3500);
+      return;
+    }
+    setGarmentUploading(true);
     const f=new FormData();
     f.append("name",garmentName);
     f.append("category",category);
@@ -189,12 +255,15 @@ export default function MirrorDashboard({user}:{user:User}){
       await api.post("/garments",f);
       setAdminOpen(false);
       setGarmentFile(undefined);
+      setGarmentPreviewUrl(null);
       if(garmentInput.current)garmentInput.current.value="";
       await qc.invalidateQueries({queryKey:["garments"]});
       setUiSuccess("Yeni kıyafet gardıroba eklendi.");
       setTimeout(()=>setUiSuccess(""), 4000);
     }catch{
       setUiError("Kıyafet eklenemedi.");
+    } finally {
+      setGarmentUploading(false);
     }
   }
 
@@ -209,6 +278,44 @@ export default function MirrorDashboard({user}:{user:User}){
       setTimeout(()=>setUiSuccess(""), 3500);
     }catch{
       setUiError("Kıyafet silinemedi.");
+    }
+  }
+
+  async function addAccessoryItem(){
+    if(!accessoryFile){
+      setUiError("Aksesuar görseli seçmeden eklenemez.");
+      setTimeout(()=>setUiError(""), 3500);
+      return;
+    }
+
+    const form = new FormData();
+    form.append("name", accessoryName.trim() || "Yeni aksesuar");
+    form.append("category", accessoryCategory);
+    form.append("image", accessoryFile);
+
+    try{
+      const response = await api.post<AccessoryItem>("/accessories", form);
+      setAccessoryItems(prev => [normalizeAccessory(response.data), ...prev]);
+      setAccessoryName("Yeni aksesuar");
+      setAccessoryCategory("other");
+      setAccessoryFile(undefined);
+      setAccessoryPreviewUrl(null);
+      if(accessoryInput) accessoryInput.value="";
+      setUiSuccess("Aksesuar eklendi.");
+      setTimeout(()=>setUiSuccess(""), 2500);
+    }catch{
+      setUiError("Aksesuar eklenemedi.");
+    }
+  }
+
+  async function removeAccessoryItem(id:string){
+    try{
+      await api.delete(`/accessories/${id}`);
+      setAccessoryItems(prev => prev.filter(item => item.id !== id));
+      setUiSuccess("Aksesuar kaldırıldı.");
+      setTimeout(()=>setUiSuccess(""), 2500);
+    }catch{
+      setUiError("Aksesuar silinemedi.");
     }
   }
 
@@ -322,7 +429,7 @@ export default function MirrorDashboard({user}:{user:User}){
                 {basePersonImage ? (
                   <img
                     className="makeup-portrait-img"
-                    src={`/api/v1/person-images/${basePersonImage.id}/preview`}
+                    src={`/api/v1/person-images/${basePersonImage.id}/cutout`}
                     alt="Makyaj Görünümü (Yüz)"
                   />
                 ) : processingImage ? (
@@ -388,27 +495,21 @@ export default function MirrorDashboard({user}:{user:User}){
             <article className="glass-panel widget-accessories">
               <div className="panel-header">
                 <span>Aksesuar önerisi</span>
-                <Gem size={14} className="header-icon" />
+                <button
+                  type="button"
+                  className="diamond-open-btn"
+                  title="Aksesuar Galerisi"
+                  onClick={()=>setAccessoryOpen(true)}
+                >
+                  <Gem size={14} className="header-icon" />
+                </button>
               </div>
               <div className="accessories-row">
-                <div className="accessory-chip" title="Altın Küpe">
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#e8c88b" strokeWidth="1.6">
-                    <circle cx="12" cy="7" r="4"/>
-                    <path d="M12 11v8M9 19h6"/>
-                  </svg>
-                </div>
-                <div className="accessory-chip" title="İnce Kolye">
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#e8c88b" strokeWidth="1.6">
-                    <path d="M6 3c0 7 6 12 6 12s6-5 6-12"/>
-                    <circle cx="12" cy="18" r="2.5"/>
-                  </svg>
-                </div>
-                <div className="accessory-chip" title="Deri Çanta">
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#e8c88b" strokeWidth="1.6">
-                    <rect x="4" y="8" width="16" height="13" rx="3"/>
-                    <path d="M8 8V6a4 4 0 0 1 8 0v2"/>
-                  </svg>
-                </div>
+                {accessoryItems.slice(0, 3).map(item => (
+                  <div key={item.id} className="accessory-chip" title={item.name}>
+                    {item.imageUrl ? <img src={item.imageUrl} alt={item.name} className="accessory-thumb" /> : <Gem size={18} />}
+                  </div>
+                ))}
               </div>
             </article>
 
@@ -455,7 +556,7 @@ export default function MirrorDashboard({user}:{user:User}){
               ) : basePersonImage ? (
                 <img
                   className="reflection-figure"
-                  src={`/api/v1/person-images/${basePersonImage.id}/preview`}
+                  src={`/api/v1/person-images/${basePersonImage.id}/cutout`}
                   alt="Kişi Yansıması"
                 />
               ) : (
@@ -542,8 +643,8 @@ export default function MirrorDashboard({user}:{user:User}){
               </div>
 
               <div className="outfit-cards-list">
-                {garments.data && garments.data.length > 0 ? (
-                  garments.data.map((g, idx) => {
+                {visibleGarments.length > 0 ? (
+                  visibleGarments.map((g, idx) => {
                     const isSelected = selectedGarment === g.id;
                     return (
                       <div
@@ -622,6 +723,156 @@ export default function MirrorDashboard({user}:{user:User}){
       </section>
 
       {/* Gardırop Yönetim Modalı (Kıyafet Ekleme & Çıkarma) */}
+      {accessoryOpen && (
+        <div className="modal-backdrop" onClick={()=>setAccessoryOpen(false)}>
+          <div className="admin-modal-card accessory-mgmt-modal" onClick={e=>e.stopPropagation()}>
+            <button
+              type="button"
+              className="modal-close-btn"
+              onClick={()=>setAccessoryOpen(false)}
+            >
+              <X size={18} />
+            </button>
+            <span className="modal-eyebrow">AKSESUAR</span>
+            <h2>Aksesuar Galerisi</h2>
+
+            <div className="auth-tabs" style={{marginBottom: 16}}>
+              <button type="button" className="auth-tab active">Listem ({accessoryItems.length})</button>
+              <button
+                type="button"
+                className="auth-tab"
+                onClick={()=>{
+                  setAccessoryName("Yeni aksesuar");
+                  setAccessoryCategory("other");
+                  setAccessoryFile(undefined);
+                  setAccessoryPreviewUrl(null);
+                  if(accessoryInput) accessoryInput.value = "";
+                }}
+              >
+                <Plus size={14} style={{verticalAlign:"middle", marginRight: 4}}/>
+                Yeni Ekle
+              </button>
+            </div>
+
+            {accessoryItems.length > 0 ? (
+              <div className="wardrobe-items-manager">
+                <div className="wardrobe-mgmt-list">
+                  {accessoryItems.map(item => (
+                    <div key={item.id} className="wardrobe-mgmt-item accessory-mgmt-item">
+                      <div className="mgmt-item-visual">
+                        {item.imageUrl ? <img src={item.imageUrl} alt={item.name} className="mgmt-item-thumb accessory-mgmt-thumb" /> : <Gem size={24} />}
+                      </div>
+
+                      <div className="mgmt-item-info">
+                        <b>{item.name}</b>
+                        <small>{accessoryCategoryName[item.category ?? "other"] || "Diğer"}</small>
+                      </div>
+
+                      <button
+                        type="button"
+                        className="mgmt-delete-btn"
+                        title="Aksesuarı Kaldır"
+                        onClick={()=>removeAccessoryItem(item.id)}
+                      >
+                        <Trash2 size={15} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="wardrobe-mgmt-empty">
+                <p>Henüz aksesuarınız yok.</p>
+                <button
+                  type="button"
+                  className="glass-action-btn"
+                  style={{marginTop: 10}}
+                  onClick={()=>{
+                    setAccessoryName("Yeni aksesuar");
+                    setAccessoryFile(undefined);
+                    setAccessoryPreviewUrl(null);
+                    if(accessoryInput) accessoryInput.value = "";
+                  }}
+                >
+                  İlk Aksesuarını Ekle
+                </button>
+              </div>
+            )}
+
+            <div className="accessory-add-form" style={{marginTop: 12}}>
+              <label>
+                Aksesuar Adı
+                <input
+                  value={accessoryName}
+                  onChange={e=>setAccessoryName(e.target.value)}
+                  placeholder="Örn: Altın Küpe"
+                  required
+                />
+
+                <label>
+                  Kategori
+                  <select
+                    value={accessoryCategory}
+                    onChange={e=>setAccessoryCategory(e.target.value)}
+                  >
+                    <option value="earrings">Küpe</option>
+                    <option value="necklace">Kolye</option>
+                    <option value="bracelet">Bileklik</option>
+                    <option value="watch">Saat</option>
+                    <option value="ring">Yüzük</option>
+                    <option value="other">Diğer</option>
+                  </select>
+                </label>
+              </label>
+
+              <input
+                ref={node => setAccessoryInput(node)}
+                hidden
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                onChange={e=>{
+                  const nextFile = e.target.files?.[0];
+                  if(nextFile){
+                    if(accessoryPreviewUrl){
+                      URL.revokeObjectURL(accessoryPreviewUrl);
+                    }
+                    setAccessoryFile(nextFile);
+                    setAccessoryPreviewUrl(URL.createObjectURL(nextFile));
+                  } else {
+                    setAccessoryFile(undefined);
+                    setAccessoryPreviewUrl(null);
+                  }
+                }}
+              />
+
+              <button
+                type="button"
+                className="file-picker-btn"
+                onClick={()=>accessoryInput?.click()}
+              >
+                <Upload size={16} />
+                <span>{accessoryFile ? accessoryFile.name : "Aksesuar Görseli Seç"}</span>
+              </button>
+
+              {accessoryPreviewUrl && (
+                <div className="garment-preview-box">
+                  <img src={accessoryPreviewUrl} alt="Seçilen aksesuar önizlemesi" className="garment-preview-image" />
+                </div>
+              )}
+
+              <button
+                type="button"
+                className="modal-submit-btn"
+                disabled={!accessoryFile}
+                onClick={addAccessoryItem}
+              >
+                Aksesuarı Ekle
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {adminOpen && (
         <div className="modal-backdrop" onClick={()=>setAdminOpen(false)}>
           <div className="admin-modal-card wardrobe-mgmt-modal" onClick={e=>e.stopPropagation()}>
@@ -655,9 +906,9 @@ export default function MirrorDashboard({user}:{user:User}){
 
             {wardrobeTab === "list" ? (
               <div className="wardrobe-items-manager">
-                {garments.data && garments.data.length > 0 ? (
+                {visibleGarments.length > 0 ? (
                   <div className="wardrobe-mgmt-list">
-                    {garments.data.map(g => {
+                    {visibleGarments.map(g => {
                       const selected = selectedGarment === g.id;
 
                       return (
@@ -735,24 +986,56 @@ export default function MirrorDashboard({user}:{user:User}){
                   hidden
                   type="file"
                   accept="image/jpeg,image/png,image/webp"
-                  onChange={e=>setGarmentFile(e.target.files?.[0])}
+                  onChange={e=>{
+                    const nextFile = e.target.files?.[0];
+                    if(nextFile){
+                      if(garmentPreviewUrl){
+                        URL.revokeObjectURL(garmentPreviewUrl);
+                      }
+                      setGarmentFile(nextFile);
+                      setGarmentPreviewUrl(URL.createObjectURL(nextFile));
+                    } else {
+                      setGarmentFile(undefined);
+                      setGarmentPreviewUrl(null);
+                    }
+                  }}
                 />
 
                 <button
                   type="button"
                   className="file-picker-btn"
+                  disabled={garmentUploading}
                   onClick={()=>garmentInput.current?.click()}
                 >
-                  <Upload size={16} />
+                  {garmentUploading ? <Loader2 size={16} className="upload-spinner" /> : <Upload size={16} />}
                   <span>{garmentFile ? garmentFile.name : "Kıyafet Görseli Seç"}</span>
                 </button>
+
+                {garmentPreviewUrl && (
+                  <div className="garment-preview-box">
+                    <img
+                      src={garmentPreviewUrl}
+                      alt="Seçilen kıyafet önizlemesi"
+                      className="garment-preview-image"
+                    />
+                  </div>
+                )}
+
+                {!garmentFile && (
+                  <small className="form-helper-text">Ürün görseli zorunludur.</small>
+                )}
 
                 <button
                   type="submit"
                   className="modal-submit-btn"
-                  disabled={!garmentFile}
+                  disabled={!garmentFile || garmentUploading}
                 >
-                  Gardıroba Ekle
+                  {garmentUploading ? (
+                    <span style={{display:"inline-flex", alignItems:"center", gap: 8}}>
+                      <Loader2 size={16} className="upload-spinner" />
+                      Yüklüyor...
+                    </span>
+                  ) : "Gardıroba Ekle"}
                 </button>
               </form>
             )}

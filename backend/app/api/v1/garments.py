@@ -24,13 +24,16 @@ async def list_garments(user=Depends(verified_user)):
             {"user_id": user["_id"]},
             {"created_by": user["_id"]}
         ],
-        "active": True
+        "active": True,
+        "image_key": {"$exists": True, "$ne": "pending", "$ne": None}
     }).sort("created_at", -1)]
 
 @router.post("", status_code=201, dependencies=[Depends(validate_csrf)])
 async def create(name: str = Form(...), category: str = Form(...), image: UploadFile = File(...), user=Depends(verified_user)):
     if category not in {"upper_body", "lower_body", "dress", "kombin"}:
         raise HTTPException(422, "Kategori geçersiz")
+    if not image or not getattr(image, "filename", None):
+        raise HTTPException(422, "Ürün görseli gerekli")
     content, _, _ = normalize_image(await image.read())
     doc = {
         "user_id": user["_id"],

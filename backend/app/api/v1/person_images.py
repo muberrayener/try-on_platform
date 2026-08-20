@@ -109,6 +109,55 @@ async def delete_image(image_id: str, user=Depends(verified_user)):
     remove_object(image["original_key"])
 
 
+@router.get("/{image_id}/cutout")
+async def cutout_image(
+    image_id: str,
+    user=Depends(verified_user),
+):
+    try:
+        oid = ObjectId(image_id)
+    except Exception as exc:
+        raise HTTPException(
+            400,
+            "Geçersiz görsel kimliği",
+        ) from exc
+
+    image = await db.person_images.find_one({
+        "_id": oid,
+        "user_id": user["_id"],
+        "status": "ready",
+    })
+
+    if not image or not image.get("cutout_key"):
+        raise HTTPException(
+            404,
+            "Kesilmiş görsel bulunamadı",
+        )
+
+    obj = get_object(
+        image["cutout_key"],
+    )
+
+    def stream():
+        try:
+            while chunk := obj.read(
+                64 * 1024,
+            ):
+                yield chunk
+        finally:
+            obj.close()
+            obj.release_conn()
+
+    return StreamingResponse(
+        stream(),
+        media_type="image/png",
+        headers={
+            "Cache-Control": "private, no-store",
+            "X-Content-Type-Options": "nosniff",
+        },
+    )
+
+
 @router.get("/{image_id}/preview")
 async def preview_image(
     image_id: str,

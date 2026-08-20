@@ -52,17 +52,16 @@ def create_preview(
         io.BytesIO(cutout_bytes),
     ).convert("RGBA")
 
-    background = Image.new(
+    transparent_background = Image.new(
         "RGBA",
         cutout.size,
-        (44, 36, 31, 255),
+        (0, 0, 0, 0),
     )
-
-    background.alpha_composite(cutout)
+    transparent_background.alpha_composite(cutout)
 
     output = io.BytesIO()
 
-    background.convert("RGB").save(
+    transparent_background.save(
         output,
         format="WEBP",
         quality=90,
