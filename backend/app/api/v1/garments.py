@@ -3,10 +3,19 @@ from bson import ObjectId
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from app.core.database import db
 from app.core.security import validate_csrf, verified_user
-from app.services.storage import normalize_image, put_image, remove_object
+from fastapi.responses import StreamingResponse
+from app.services.storage import get_object, normalize_image, put_image, remove_object
 
 router = APIRouter(prefix="/garments", tags=["garments"])
-def out(d): return {"id": str(d["_id"]), "name": d["name"], "category": d["category"], "active": d["active"]}
+def out(d):
+    garment_id = str(d["_id"])
+    return {
+        "id": garment_id,
+        "name": d["name"],
+        "category": d["category"],
+        "active": d["active"],
+        "image_url": f"/api/v1/garments/{garment_id}/image" if d.get("image_key") and d.get("image_key") != "pending" else None
+    }
 
 @router.get("")
 async def list_garments(user=Depends(verified_user)):
@@ -38,6 +47,28 @@ async def create(name: str = Form(...), category: str = Form(...), image: Upload
     doc["_id"] = result.inserted_id
     return out(doc)
 
+@router.get("/{garment_id}/image")
+async def get_garment_image(garment_id: str, user=Depends(verified_user)):
+    try:
+        oid = ObjectId(garment_id)
+    except Exception as exc:
+        raise HTTPException(400, "Geçersiz id") from exc
+    garment = await db.garments.find_one({
+        "_id": oid,
+        "$or": [
+            {"user_id": user["_id"]},
+            {"created_by": user["_id"]}
+        ],
+        "active": True
+    })
+    if not garment or not garment.get("image_key") or garment["image_key"] == "pending":
+        raise HTTPException(404, "Görsel bulunamadı")
+    try:
+        response = get_object(garment["image_key"])
+        return StreamingResponse(response.stream(32 * 1024), media_type="image/webp")
+    except Exception as exc:
+        raise HTTPException(404, "Görsel nesnesi bulunamadı") from exc
+
 @router.delete("/{garment_id}", status_code=204, dependencies=[Depends(validate_csrf)])
 async def delete_garment(garment_id: str, user=Depends(verified_user)):
     try:
@@ -61,5 +92,6 @@ async def delete_garment(garment_id: str, user=Depends(verified_user)):
             remove_object(garment["image_key"])
         except Exception:
             pass
+
 
 

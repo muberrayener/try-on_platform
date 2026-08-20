@@ -33,7 +33,7 @@ import {api} from "../api/client";
 type User={username:string;role:string;email?:string};
 type ImageStatus="uploaded"|"background_removal"|"ready"|"failed"|"deleted";
 type ImageItem={id:string;width:number;height:number;status:ImageStatus;background_removed:boolean;has_preview:boolean;error_code?:string|null;created_at:string};
-type Garment={id:string;name:string;category:string;image_key?:string};
+type Garment={id:string;name:string;category:string;image_key?:string;image_url?:string|null;active?:boolean};
 type Job={id:string;status:string;progress:number;has_result:boolean;garment_id:string};
 type MirrorView="base"|"result";
 type WeatherInfo={temp:number;code:number;isDay:number};
@@ -568,9 +568,17 @@ export default function MirrorDashboard({user}:{user:User}){
                         </div>
 
                         <div className={`outfit-art-box theme-${idx % 3}`}>
-                          <div className="outfit-mannequin">
-                            <span className="outfit-initial">{g.name.slice(0, 1)}</span>
-                          </div>
+                          {g.image_url ? (
+                            <img
+                              src={g.image_url}
+                              alt={g.name}
+                              className="outfit-wardrobe-image"
+                            />
+                          ) : (
+                            <div className="outfit-mannequin">
+                              <span className="outfit-initial">{g.name.slice(0, 1)}</span>
+                            </div>
+                          )}
                         </div>
 
                         <div className="outfit-info-overlay">
@@ -649,22 +657,39 @@ export default function MirrorDashboard({user}:{user:User}){
               <div className="wardrobe-items-manager">
                 {garments.data && garments.data.length > 0 ? (
                   <div className="wardrobe-mgmt-list">
-                    {garments.data.map(g => (
-                      <div key={g.id} className="wardrobe-mgmt-item">
-                        <div className="mgmt-item-info">
-                          <b>{g.name}</b>
-                          <small>{categoryName[g.category] || g.category}</small>
-                        </div>
-                        <button
-                          type="button"
-                          className="mgmt-delete-btn"
-                          title="Gardıroptan Çıkar"
-                          onClick={()=>deleteGarment(g.id)}
+                    {garments.data.map(g => {
+                      const selected = selectedGarment === g.id;
+
+                      return (
+                        <div
+                          key={g.id}
+                          className={`wardrobe-mgmt-item ${selected ? "selected" : ""}`}
+                          onClick={()=>setSelectedGarment(g.id)}
                         >
-                          <Trash2 size={15} />
-                        </button>
-                      </div>
-                    ))}
+                          <div className="mgmt-item-visual">
+                            {g.image_url ? (
+                              <img src={g.image_url} alt={g.name} className="mgmt-item-thumb" />
+                            ) : (
+                              <div className="mgmt-item-fallback">{g.name.slice(0, 1)}</div>
+                            )}
+                          </div>
+
+                          <div className="mgmt-item-info">
+                            <b>{g.name}</b>
+                            <small>{categoryName[g.category] || g.category}</small>
+                          </div>
+
+                          <button
+                            type="button"
+                            className="mgmt-delete-btn"
+                            title="Gardıroptan Çıkar"
+                            onClick={(e)=>{e.stopPropagation(); deleteGarment(g.id);}}
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        </div>
+                      );
+                    })}
                   </div>
                 ) : (
                   <div className="wardrobe-mgmt-empty">
