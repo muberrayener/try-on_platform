@@ -36,6 +36,7 @@ type ImageStatus="uploaded"|"background_removal"|"ready"|"failed"|"deleted";
 type ImageItem={id:string;width:number;height:number;status:ImageStatus;background_removed:boolean;has_preview:boolean;error_code?:string|null;created_at:string};
 type Garment={id:string;name:string;category:string;image_key?:string;image_url?:string|null;status?:string;background_removed?:boolean;active?:boolean};
 type AccessoryItem={id:string; name:string; category?:string; imageUrl?:string; image_url?:string | null};
+type DailyPlan={id:string;time:string;title:string;active?:boolean};
 type Job={id:string;status:string;progress:number;has_result:boolean;garment_id:string};
 type MirrorView="base"|"result";
 type WeatherInfo={temp:number;code:number;isDay:number};
@@ -96,6 +97,9 @@ export default function MirrorDashboard({user}:{user:User}){
   const[accessoryFile,setAccessoryFile]=useState<File>();
   const[accessoryPreviewUrl,setAccessoryPreviewUrl]=useState<string | null>(null);
   const[accessoryInput,setAccessoryInput]=useState<HTMLInputElement | null>(null);
+  const[planOpen,setPlanOpen]=useState(false);
+  const[planTime,setPlanTime]=useState("09:00");
+  const[planTitle,setPlanTitle]=useState("");
   const[profileOpen,setProfileOpen]=useState(false);
   const[uiError,setUiError]=useState("");
   const[uiSuccess,setUiSuccess]=useState("");
@@ -176,6 +180,11 @@ export default function MirrorDashboard({user}:{user:User}){
   const accessories=useQuery({
     queryKey:["accessories"],
     queryFn:()=>api.get<AccessoryItem[]>("/accessories").then(r=>r.data.map(normalizeAccessory))
+  });
+
+  const dailyPlans=useQuery({
+    queryKey:["daily-plans"],
+    queryFn:()=>api.get<DailyPlan[]>("/daily-plans").then(r=>r.data)
   });
 
   useEffect(()=>{
@@ -318,6 +327,33 @@ export default function MirrorDashboard({user}:{user:User}){
       setTimeout(()=>setUiSuccess(""), 2500);
     }catch{
       setUiError("Aksesuar silinemedi.");
+    }
+  }
+
+  async function addDailyPlan(e:FormEvent<HTMLFormElement>){
+    e.preventDefault();
+    const form = new FormData();
+    form.append("time", planTime);
+    form.append("title", planTitle.trim());
+    try{
+      await api.post("/daily-plans", form);
+      setPlanTitle("");
+      await qc.invalidateQueries({queryKey:["daily-plans"]});
+      setUiSuccess("Günün planına eklendi.");
+      setTimeout(()=>setUiSuccess(""), 2500);
+    }catch{
+      setUiError("Plan eklenemedi.");
+    }
+  }
+
+  async function removeDailyPlan(id:string){
+    try{
+      await api.delete(`/daily-plans/${id}`);
+      await qc.invalidateQueries({queryKey:["daily-plans"]});
+      setUiSuccess("Plan kaldırıldı.");
+      setTimeout(()=>setUiSuccess(""), 2500);
+    }catch{
+      setUiError("Plan kaldırılamadı.");
     }
   }
 
@@ -519,13 +555,22 @@ export default function MirrorDashboard({user}:{user:User}){
             <article className="glass-panel widget-timeline">
               <div className="panel-header">
                 <span>Günün planı</span>
-                <Sparkles size={14} className="header-icon" />
+                <button
+                  type="button"
+                  className="diamond-open-btn"
+                  title="Günün Planını Yönet"
+                  onClick={()=>setPlanOpen(true)}
+                >
+                  <Sparkles size={14} className="header-icon" />
+                </button>
               </div>
               <ul className="mirror-timeline-list">
-                <li><span className="time">09:00</span> <span className="dot">•</span> <span className="event">Toplantı</span></li>
-                <li><span className="time">12:30</span> <span className="dot">•</span> <span className="event">Öğle Yemeği</span></li>
-                <li><span className="time">15:00</span> <span className="dot">•</span> <span className="event">Sunum</span></li>
-                <li><span className="time">18:30</span> <span className="dot">•</span> <span className="event">Pilates</span></li>
+                {(dailyPlans.data ?? []).slice(0, 4).map(plan=>(
+                  <li key={plan.id}><span className="time">{plan.time}</span> <span className="dot">•</span> <span className="event">{plan.title}</span></li>
+                ))}
+                {!dailyPlans.isLoading && !dailyPlans.data?.length && (
+                  <li className="timeline-empty">Plan eklemek için yıldız ikonuna dokun</li>
+                )}
               </ul>
             </article>
 
@@ -879,6 +924,44 @@ export default function MirrorDashboard({user}:{user:User}){
               </button>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {planOpen && (
+        <div className="modal-backdrop" onClick={()=>setPlanOpen(false)}>
+          <div className="admin-modal-card plan-mgmt-modal" onClick={e=>e.stopPropagation()}>
+            <button type="button" className="modal-close-btn" onClick={()=>setPlanOpen(false)}>
+              <X size={18} />
+            </button>
+            <span className="modal-eyebrow">GÜNÜN PLANI</span>
+            <h2>Planlarını Yönet</h2>
+
+            <div className="plan-items-list">
+              {(dailyPlans.data ?? []).map(plan=>(
+                <div key={plan.id} className="plan-mgmt-item">
+                  <div><b>{plan.time}</b><span>{plan.title}</span></div>
+                  <button type="button" className="mgmt-delete-btn" title="Planı Kaldır" onClick={()=>removeDailyPlan(plan.id)}>
+                    <Trash2 size={15} />
+                  </button>
+                </div>
+              ))}
+              {!dailyPlans.data?.length && <div className="wardrobe-mgmt-empty"><p>Henüz plan eklenmedi.</p></div>}
+            </div>
+
+            <form className="plan-add-form" onSubmit={addDailyPlan}>
+              <label>
+                Saat
+                <input type="time" value={planTime} onChange={e=>setPlanTime(e.target.value)} required />
+              </label>
+              <label>
+                Plan adı
+                <input value={planTitle} onChange={e=>setPlanTitle(e.target.value)} placeholder="Örn: Toplantı" required />
+              </label>
+              <button type="submit" className="modal-submit-btn" disabled={!planTitle.trim()}>
+                <Plus size={16} /> Plan Ekle
+              </button>
+            </form>
           </div>
         </div>
       )}

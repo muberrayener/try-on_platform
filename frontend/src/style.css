@@ -444,6 +444,59 @@ button,input,select{font:inherit}
 .mirror-timeline-list .event{
   color: rgba(255,255,255,0.85);
 }
+.timeline-empty{
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 1.4;
+}
+.plan-mgmt-modal{
+  width: min(460px, 94vw);
+}
+.plan-items-list{
+  display: grid;
+  gap: 8px;
+  max-height: 280px;
+  overflow-y: auto;
+  margin-bottom: 14px;
+}
+.plan-mgmt-item{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 12px;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 12px;
+  background: rgba(255,255,255,0.05);
+}
+.plan-mgmt-item > div{
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  min-width: 0;
+}
+.plan-mgmt-item b{
+  color: var(--gold-accent);
+  font-size: 13px;
+  flex: 0 0 auto;
+}
+.plan-mgmt-item span{
+  color: #fff;
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.plan-mgmt-item .mgmt-delete-btn{
+  position: static;
+  flex: 0 0 32px;
+}
+.plan-add-form{
+  display: grid;
+  gap: 12px;
+  border-top: 1px solid rgba(255,255,255,0.1);
+  padding-top: 14px;
+}
 
 /* CENTER STAGE */
 .mirror-stage-center{
