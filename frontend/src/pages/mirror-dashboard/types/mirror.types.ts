@@ -10,3 +10,10 @@ export type MirrorView="base"|"result";
 export type WeatherInfo={temp:number;code:number;isDay:number};
 export type MakeupStyle="natural"|"rose"|"soft-glam"|"night";
 
+export interface Lipstick {
+  id: string;
+  name: string;
+  color: string;
+  active: boolean;
+  is_selected: boolean;
+}
