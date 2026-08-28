@@ -2,6 +2,7 @@ import { ChangeEvent, FormEvent, useEffect, useMemo, useRef, useState } from "re
 import { api } from "../../api/client";
 import AccessoryModal from "./components/AccessoryModal";
 import DailyPlanModal from "./components/DailyPlanModal";
+import { LipstickModal } from "./components/LipstickModal"; // <-- LipstickModal import edildi
 import { AccessoryItem, DailyPlan, ImageItem, MirrorView, User } from "./types/mirror.types";
 import { MirrorHeader } from "./components/MirrorHeader";
 import { MirrorLeftColumn } from "./components/MirrorLeftColumn";
@@ -19,6 +20,8 @@ import { useJobs } from "./hooks/useJobs";
 import { usePersonUpload } from "./hooks/usePersonUpload";
 import { useToast } from "./hooks/useToast";
 import { useTryOn } from "./hooks/useTryOn";
+import { useLipsticks } from "./hooks/useLipsticks"; 
+
 export default function MirrorDashboard({ user }: { user: User }) {
   const personInput = useRef<HTMLInputElement>(null);
 
@@ -27,6 +30,7 @@ export default function MirrorDashboard({ user }: { user: User }) {
   const [profileOpen, setProfileOpen] = useState(false);
   const [wardrobeOpen, setWardrobeOpen] = useState(false);
   const [accessoryOpen, setAccessoryOpen] = useState(false);
+  const [lipstickOpen, setLipstickOpen] = useState(false); // <-- Lipstick modal görünürlük state'i
   const [accessoryTab, setAccessoryTab] = useState<"list" | "add">("list");
   const [accessoryName, setAccessoryName] = useState("Yeni aksesuar");
   const [accessoryCategory, setAccessoryCategory] = useState("other");
@@ -46,7 +50,9 @@ export default function MirrorDashboard({ user }: { user: User }) {
   const { garments, addGarment, deleteGarment } = useGarments();
   const { accessories, addAccessory, removeAccessory } = useAccessories();
   const { dailyPlans, addDailyPlan, removeDailyPlan } = useDailyPlans();
+  const { lipsticks, fetchLipsticks } = useLipsticks(); // <-- Lipstick hook kullanımı
   const jobs = useJobs();
+
   const readyImages = useMemo(
     () => [...(images.data ?? [])]
       .filter((image) => image.status === "ready" && image.background_removed && image.has_preview)
@@ -60,6 +66,15 @@ export default function MirrorDashboard({ user }: { user: User }) {
   const processingImage = images.data?.find((image) => image.status === "uploaded" || image.status === "background_removal");
   const activeJob = jobs.data?.[0];
   const createTryOn = useTryOn(basePersonImage);
+
+  // Seçili olan ruju otomatik algılayıp appliedShade state'ine yansıtma
+  const selectedLipstick = useMemo(() => lipsticks.find((l) => l.is_selected), [lipsticks]);
+
+  useEffect(() => {
+    if (selectedLipstick) {
+      setAppliedShade(selectedLipstick.color);
+    }
+  }, [selectedLipstick]);
 
   useEffect(() => {
     if (!visibleGarments.length) {
@@ -232,6 +247,7 @@ export default function MirrorDashboard({ user }: { user: User }) {
             onUploadPerson={() => personInput.current?.click()}
             onOpenAccessories={() => { setAccessoryTab("list"); setAccessoryOpen(true); }}
             onOpenPlans={() => setPlanOpen(true)}
+            onOpenLipsticks={() => setLipstickOpen(true)} // <-- Sol kolondan Ruj modalını açma yönlendirmesi
           />
 
           <MirrorStage
@@ -275,6 +291,17 @@ export default function MirrorDashboard({ user }: { user: User }) {
           onRemove={handleRemoveAccessory}
           onResetAdd={resetAccessoryAddForm}
           onClose={() => setAccessoryOpen(false)}
+        />
+      )}
+
+      {/* Ruj Modalı Entegrasyonu */}
+      {lipstickOpen && (
+        <LipstickModal
+          isOpen={lipstickOpen}
+          onClose={() => setLipstickOpen(false)}
+          onSuccess={() => {
+            fetchLipsticks(); // Listeyi güncelle
+          }}
         />
       )}
 

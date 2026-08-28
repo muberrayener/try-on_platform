@@ -1,6 +1,10 @@
 import { useState, useCallback } from "react";
-import { Lipstick, CreateLipstickPayload } from "../types/lipstick";
+import { Lipstick } from "../types/mirror.types";
 
+interface CreateLipstickPayload {
+  name: string;
+  color: string;
+}
 interface UseLipsticksOptions {
   csrfToken?: string;
 }
