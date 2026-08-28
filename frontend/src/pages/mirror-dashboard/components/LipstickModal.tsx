@@ -210,64 +210,70 @@ export const LipstickModal: React.FC<LipstickModalProps> = ({
             </div>
           ) : (
             lipsticks.map((item) => (
-              <div
-                key={item.id}
-                className={`lipstick-manager-item ${
-                  item.is_selected ? "selected" : ""
-                }`}
-              >
-                <span
-                  className="lipstick-manager-color"
-                  style={{
-                    backgroundColor: item.color,
-                  }}
-                  title={item.color}
-                />
+  <div
+    key={item.id}
+    className={`lipstick-manager-item ${item.is_selected ? "selected" : ""}`}
+  >
+    {/* Sol Taraf: Büyük Renk Dairesi, İsim ve Renk Kodu Tek Satırda */}
+    <div className="lipstick-manager-info-group">
+      <span
+        className="lipstick-manager-color"
+        style={{ backgroundColor: item.color }}
+        title={item.color}
+      />
 
-                <div className="lipstick-manager-info">
-                  <b>{item.name}</b>
-                  <small>{item.color}</small>
-                </div>
+      <div className="lipstick-manager-info">
+        <b>{item.name}</b>
+        
+        {/* Renk Kodu ve İçindeki Nokta Göstergesi */}
+        <small className="lipstick-color-badge">
+          <span
+            className="lipstick-badge-dot"
+            style={{ backgroundColor: item.color }}
+          />
+          {item.color}
+        </small>
+      </div>
+    </div>
 
-                <button
-                  type="button"
-                  className={`lipstick-select-btn ${
-                    item.is_selected ? "selected" : ""
-                  }`}
-                  disabled={
-                    item.is_selected ||
-                    selectingId === item.id
-                  }
-                  onClick={() => {
-                    void handleSelect(item.id);
-                  }}
-                >
-                  {selectingId === item.id ? (
-                    "Seçiliyor..."
-                  ) : item.is_selected ? (
-                    <>
-                      <Check size={14} />
-                      Seçili
-                    </>
-                  ) : (
-                    "Seç"
-                  )}
-                </button>
+    {/* Sağ Taraf: Seçili ve Sil Butonları */}
+    <div className="lipstick-actions-group">
+      <button
+        type="button"
+        className={`lipstick-select-btn ${item.is_selected ? "selected" : ""}`}
+        disabled={item.is_selected || selectingId === item.id}
+        onClick={() => {
+          void handleSelect(item.id);
+        }}
+      >
+        {selectingId === item.id ? (
+          "Seçiliyor..."
+        ) : item.is_selected ? (
+          <>
+            <Check size={14} />
+            Seçili
+          </>
+        ) : (
+          "Seç"
+        )}
+      </button>
 
-                <button
-                  type="button"
-                  className="mgmt-delete-btn"
-                  title="Ruju sil"
-                  aria-label={`${item.name} rujunu sil`}
-                  disabled={deletingId === item.id}
-                  onClick={() => {
-                    void handleDelete(item.id);
-                  }}
-                >
-                  <Trash2 size={15} />
-                </button>
-              </div>
-            ))
+      <button
+        type="button"
+        className="lipstick-delete-btn"
+        title="Ruju sil"
+        aria-label={`${item.name} rujunu sil`}
+        disabled={deletingId === item.id}
+        onClick={() => {
+          void handleDelete(item.id);
+        }}
+      >
+        <Trash2 size={15} />
+      </button>
+    </div>
+  </div>
+))
+            
           )}
         </div>
       </div>

@@ -1242,3 +1242,333 @@ button,input,select{font:inherit}
   border-radius: 12px;
   display: block;
 }
+
+/* Ruj listesindeki her bir elemanın kapsayıcısı */
+.lipstick-manager-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  margin-bottom: 8px;
+  background-color: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+}
+
+/* Sol taraf: Bilgi grubu */
+.lipstick-manager-info-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+/* Tek satırdaki Ruj Adı ve Renk Kodu */
+.lipstick-manager-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  white-space: nowrap;
+}
+
+.lipstick-manager-info b {
+  font-size: 14px;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+/* Renk badge/rozet alanı */
+.lipstick-color-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-family: monospace;
+  color: #aaaaaa;
+  background-color: rgba(255, 255, 255, 0.08);
+  padding: 3px 8px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Rozet içindeki renk noktası */
+.lipstick-badge-dot {
+  width: 24px;
+  height: 18px;
+  border-radius: 30%;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+/* Sağ Taraf: Aksiyon Butonları */
+.lipstick-actions-group {
+  display: flex;
+  align-items: center;
+  gap: 30px;
+  margin-left: auto;
+}
+
+.lipstick-delete-btn{
+  position: relative;
+  top: 0px;
+  right: 10px;
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  background: rgba(18, 12, 9, 0.7);
+  border: 1px solid rgba(255, 100, 100, 0.4);
+  color: #ff9e99;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: all .2s;
+  backdrop-filter: blur(8px);
+}
+.lipstick-delete-btn:hover{
+  background: #ff5555;
+  color: #fff;
+  border-color: #ff5555;
+  transform: scale(1.04);
+}
+
+.lipstick-select-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #ffffff;
+  background-color: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  user-select: none;
+}
+
+/* Hover (Üzerine Gelindiğinde) */
+.lipstick-select-btn:hover:not(:disabled) {
+  background-color: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: translateY(-1px);
+}
+
+/* Active (Tıklandığı An) */
+.lipstick-select-btn:active:not(:disabled) {
+  transform: translateY(0);
+  background-color: rgba(255, 255, 255, 0.15);
+}
+
+/* Seçili (active / selected) Durumu */
+.lipstick-select-btn.selected {
+  background-color: #db2777; /* Pembe / Ruj Teması */
+  border-color: #f472b6;
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(219, 39, 119, 0.35);
+  cursor: default;
+}
+
+/* Disabled (Devre Dışı / Yükleniyor) Durumu */
+.lipstick-select-btn:disabled {
+  opacity: 0.85;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+/* Seçili Buton İkon Boyutu ve Hizalaması */
+.lipstick-select-btn svg {
+  width: 14px;
+  height: 14px;
+  stroke-width: 2.5;
+}
+
+/* Ana Liste Kapsayıcısı */
+.lipstick-manager-list {
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Liste Başlığı (Rujlarınız) */
+.lipstick-manager-list h3 {
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.6);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 12px;
+}
+
+/* Scroll (Kaydırma) Alanı */
+.lipstick-manager-list {
+  max-height: 240px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+/* Özel Scrollbar (Kaydırma Çubuğu) Stili */
+.lipstick-manager-list::-webkit-scrollbar {
+  width: 5px;
+}
+
+.lipstick-manager-list::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 10px;
+}
+
+.lipstick-manager-list::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 10px;
+}
+
+.lipstick-manager-list::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* Liste Boş Olduğunda Gösterilecek Alan */
+.wardrobe-mgmt-empty {
+  text-align: center;
+  padding: 24px 12px;
+  background-color: rgba(255, 255, 255, 0.02);
+  border: 1px dashed rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+}
+
+.wardrobe-mgmt-empty p {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.4);
+  margin: 0;
+}
+
+/* Seçili (Selected) Liste Elemanı Stili */
+.lipstick-manager-item.selected {
+  background-color: rgba(219, 39, 119, 0.1);
+  border-color: rgba(244, 114, 182, 0.4);
+  box-shadow: 0 0 12px rgba(219, 39, 119, 0.15);
+}
+
+/* Form Kapsayıcısı */
+.lipstick-add-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 20px;
+}
+
+/* Label (Etiket) Tanımları */
+.lipstick-add-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+/* Metin Giriş Alanı (Ruj Adı Input) */
+.lipstick-add-form input[type="text"] {
+  width: 100%;
+  padding: 10px 14px;
+  font-size: 14px;
+  color: #ffffff;
+  background-color: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  outline: none;
+  transition: all 0.2s ease-in-out;
+}
+
+.lipstick-add-form input[type="text"]:focus {
+  border-color: #ec4899;
+  background-color: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 0 0 3px rgba(236, 72, 153, 0.2);
+}
+
+.lipstick-add-form input[type="text"]::placeholder {
+  color: rgba(255, 255, 255, 0.3);
+}
+
+/* Renk Seçimi Satırı */
+.lipstick-color-input-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 10px;
+  background-color: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+}
+
+/* Native Color Input Özelleştirmesi */
+.lipstick-color-input-row input[type="color"] {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  background: transparent;
+  padding: 0;
+}
+
+.lipstick-color-input-row input[type="color"]::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+
+.lipstick-color-input-row input[type="color"]::-webkit-color-swatch {
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+}
+
+.lipstick-color-input-row input[type="color"]::-moz-color-swatch {
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+}
+
+/* Hex Kod Yazısı */
+.lipstick-color-input-row span:not(.lipstick-color-preview) {
+  font-family: monospace;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.8);
+  letter-spacing: 0.5px;
+}
+
+/* Form Ekle Butonu */
+.modal-submit-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 12px;
+  margin-top: 4px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #ffffff;
+  background-color: #db2777;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  box-shadow: 0 4px 12px rgba(219, 39, 119, 0.3);
+}
+
+.modal-submit-btn:hover:not(:disabled) {
+  background-color: #be185d;
+  box-shadow: 0 6px 16px rgba(219, 39, 119, 0.4);
+  transform: translateY(-1px);
+}
+
+.modal-submit-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.modal-submit-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  box-shadow: none;
+}
