@@ -79,6 +79,21 @@ export default function MirrorDashboard({ user }: { user: User }) {
 
   // Seçili olan ruju otomatik algılayıp appliedShade state'ine yansıtma
   const selectedLipstick = useMemo(() => lipsticks.find((l) => l.is_selected), [lipsticks]);
+  const recommendedLipsticks = useMemo(() => {
+    const shuffled = [...lipsticks];
+
+    for (let index = shuffled.length - 1; index > 0; index -= 1) {
+      const randomIndex = Math.floor(Math.random() * (index + 1));
+      [shuffled[index], shuffled[randomIndex]] = [shuffled[randomIndex], shuffled[index]];
+    }
+
+    const recommendations = shuffled.slice(0, 6);
+    if (selectedLipstick && !recommendations.some((lipstick) => lipstick.id === selectedLipstick.id)) {
+      recommendations[recommendations.length - 1] = selectedLipstick;
+    }
+
+    return recommendations;
+  }, [lipsticks, selectedLipstick]);
 
   useEffect(() => {
     if (selectedLipstick) {
@@ -250,7 +265,7 @@ export default function MirrorDashboard({ user }: { user: User }) {
             processingImage={processingImage}
             accessoryItems={accessoryItems}
             dailyPlans={dailyPlans.data ?? []}
-            lipsticks={lipsticks}
+            lipsticks={recommendedLipsticks}
             selectedShade={selectedShade}
             appliedShade={appliedShade}
             selectedLipstick={selectedLipstick}
