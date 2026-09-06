@@ -1,4 +1,5 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
+import { api } from "../../../api/client";
 import { Lipstick } from "../types/mirror.types";
 
 interface CreateLipstickPayload {
@@ -21,22 +22,18 @@ export const useLipsticks = (options?: UseLipsticksOptions) => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/lipsticks", {
-        headers: { Accept: "application/json" },
-      });
-
-      if (!res.ok) {
-        throw new Error("Ruj listesi alınamadı.");
-      }
-
-      const data: Lipstick[] = await res.json();
-      setLipsticks(data);
+      const response = await api.get<Lipstick[]>("/lipsticks");
+      setLipsticks(response.data);
     } catch (err: any) {
       setError(err.message || "Bir sorun oluştu.");
     } finally {
       setLoading(false);
     }
   }, []);
+
+  useEffect(() => {
+    void fetchLipsticks();
+  }, [fetchLipsticks]);
 
   // 2. Yeni Ruj Ekle (POST - Form Data)
   const createLipstick = async (payload: CreateLipstickPayload) => {
@@ -48,19 +45,8 @@ export const useLipsticks = (options?: UseLipsticksOptions) => {
     formData.append("color", payload.color);
 
     try {
-      const res = await fetch("/lipsticks", {
-        method: "POST",
-        headers: {
-          ...(csrfToken && { "X-CSRF-Token": csrfToken }),
-        },
-        body: formData,
-      });
-
-      if (!res.ok) {
-        throw new Error("Yeni ruj eklenemedi.");
-      }
-
-      const newLipstick: Lipstick = await res.json();
+      const response = await api.post<Lipstick>("/lipsticks", formData);
+      const newLipstick = response.data;
 
       // State'e ekle
       setLipsticks((prev) => [newLipstick, ...prev]);
@@ -77,16 +63,7 @@ export const useLipsticks = (options?: UseLipsticksOptions) => {
   const selectLipstick = async (id: string) => {
     setError(null);
     try {
-      const res = await fetch(`/lipsticks/${id}/select`, {
-        method: "PATCH",
-        headers: {
-          ...(csrfToken && { "X-CSRF-Token": csrfToken }),
-        },
-      });
-
-      if (!res.ok) {
-        throw new Error("Ruj seçimi güncellenemedi.");
-      }
+      await api.patch(`/lipsticks/${id}/select`);
 
       // Backend tek bir ruju seçili yapıp diğerlerini false yaptığı için state'i güncelliyoruz
       setLipsticks((prev) =>
@@ -105,16 +82,7 @@ export const useLipsticks = (options?: UseLipsticksOptions) => {
   const deleteLipstick = async (id: string) => {
     setError(null);
     try {
-      const res = await fetch(`/lipsticks/${id}`, {
-        method: "DELETE",
-        headers: {
-          ...(csrfToken && { "X-CSRF-Token": csrfToken }),
-        },
-      });
-
-      if (!res.ok) {
-        throw new Error("Ruj silinemedi.");
-      }
+      await api.delete(`/lipsticks/${id}`);
 
       // Listeden çıkar (Soft-delete backend'de yapıldığı için frontend listeden kaldırır)
       setLipsticks((prev) => prev.filter((item) => item.id !== id));

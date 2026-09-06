@@ -1,14 +1,15 @@
 import { Aperture, Camera, Gem, MoreVertical, Sparkles } from "lucide-react";
-import { AccessoryItem, DailyPlan, ImageItem } from "../types/mirror.types";
-import { lipstickShades } from "../constants/mirror.constants";
+import { AccessoryItem, DailyPlan, ImageItem, Lipstick } from "../types/mirror.types";
 
 interface Props {
   personImage?: ImageItem;
   processingImage?: ImageItem;
   accessoryItems: AccessoryItem[];
   dailyPlans: DailyPlan[];
+  lipsticks: Lipstick[];
   selectedShade: string;
   appliedShade: string | null;
+  selectedLipstick?: Lipstick;
   onSelectShade: (shade: string) => void;
   onApplyShade: () => void;
   onUploadPerson: () => void;
@@ -22,8 +23,10 @@ export function MirrorLeftColumn({
   processingImage,
   accessoryItems,
   dailyPlans,
+  lipsticks,
   selectedShade,
   appliedShade,
+  selectedLipstick,
   onSelectShade,
   onApplyShade,
   onUploadPerson,
@@ -31,7 +34,8 @@ export function MirrorLeftColumn({
   onOpenPlans,
   onOpenLipsticks, // <-- Destructuring kısmına eklendi
 }: Props) {
-  const currentShade = lipstickShades.find((shade) => shade.id === selectedShade) || lipstickShades[2];
+  const currentShade = lipsticks.find((lipstick) => lipstick.id === selectedShade) || selectedLipstick || lipsticks[0];
+  const displayedShade = currentShade;
 
   return (
     <aside className="mirror-col-left">
@@ -93,27 +97,28 @@ export function MirrorLeftColumn({
           </button>
         </div>
         <div className="lipstick-swatches">
-          {lipstickShades.map((shade) => (
+          {lipsticks.map((lipstick) => (
             <button
-              key={shade.id}
+              key={lipstick.id}
               type="button"
-              className={`lipstick-swatch ${selectedShade === shade.id ? "active" : ""}`}
-              style={{ backgroundColor: shade.color }}
-              onClick={() => onSelectShade(shade.id)}
-              title={shade.name}
+              className={`lipstick-swatch ${selectedShade === lipstick.id ? "active" : ""}`}
+              style={{ backgroundColor: lipstick.color }}
+              onClick={() => onSelectShade(lipstick.id)}
+              title={lipstick.name}
             />
           ))}
         </div>
         <div className="panel-footer-text">
-          <b>{currentShade.name}</b>
+          <b>{displayedShade?.name ?? "Ruj eklenmedi"}</b>
           <p>Yumuşak &amp; Doğal</p>
         </div>
         <button
           type="button"
-          className={`glass-action-btn ${appliedShade === selectedShade ? "applied" : ""}`}
+          className={`glass-action-btn ${displayedShade && appliedShade === displayedShade.color ? "applied" : ""}`}
           onClick={onApplyShade}
+          disabled={!displayedShade}
         >
-          {appliedShade === selectedShade ? "Uygulandı" : "Uygula"}
+          {displayedShade && appliedShade === displayedShade.color ? "Uygulandı" : "Uygula"}
         </button>
       </article>
 

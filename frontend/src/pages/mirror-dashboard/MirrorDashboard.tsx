@@ -240,10 +240,12 @@ export default function MirrorDashboard({ user }: { user: User }) {
             processingImage={processingImage}
             accessoryItems={accessoryItems}
             dailyPlans={dailyPlans.data ?? []}
+            lipsticks={lipsticks}
             selectedShade={selectedShade}
             appliedShade={appliedShade}
+            selectedLipstick={selectedLipstick}
             onSelectShade={setSelectedShade}
-            onApplyShade={() => setAppliedShade(selectedShade)}
+            onApplyShade={() => setAppliedShade(lipsticks.find((lipstick) => lipstick.id === selectedShade)?.color ?? selectedLipstick?.color ?? null)}
             onUploadPerson={() => personInput.current?.click()}
             onOpenAccessories={() => { setAccessoryTab("list"); setAccessoryOpen(true); }}
             onOpenPlans={() => setPlanOpen(true)}
