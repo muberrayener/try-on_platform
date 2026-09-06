@@ -8,6 +8,7 @@ from pymongo import MongoClient
 from worker.celery_app import celery_app
 from worker.background import (
     create_preview,
+    remove_accessory_background,
     remove_garment_background,
     remove_person_background,
 )
@@ -195,5 +196,65 @@ def remove_garment_background_task(self: Task, garment_id: str):
         mongo.garments.update_one(
             {"_id": oid},
             {"$set": {"status": "failed", "error_code": type(exc).__name__, "updated_at": datetime.now(timezone.utc)}},
+        )
+        raise
+
+
+@celery_app.task(
+    bind=True,
+    name="accessory.remove_background",
+    autoretry_for=(ConnectionError,),
+    retry_backoff=True,
+    retry_jitter=True,
+    max_retries=3,
+)
+def remove_accessory_background_task(self: Task, accessory_id: str):
+    oid = ObjectId(accessory_id)
+    accessory = mongo.accessories.find_one_and_update(
+        {"_id": oid, "status": "uploaded"},
+        {
+            "$set": {
+                "status": "background_removal",
+                "background_task_id": self.request.id,
+                "updated_at": datetime.now(timezone.utc),
+            }
+        },
+    )
+    if not accessory:
+        return {"ignored": True}
+
+    try:
+        cutout_bytes = remove_accessory_background(download(accessory["image_key"]))
+        cutout_key = f"users/{accessory['user_id']}/accessories/{oid}/cutout.png"
+        minio.put_object(
+            bucket,
+            cutout_key,
+            io.BytesIO(cutout_bytes),
+            len(cutout_bytes),
+            content_type="image/png",
+        )
+        mongo.accessories.update_one(
+            {"_id": oid},
+            {
+                "$set": {
+                    "status": "ready",
+                    "cutout_key": cutout_key,
+                    "background_removed": True,
+                    "updated_at": datetime.now(timezone.utc),
+                },
+                "$unset": {"error_code": ""},
+            },
+        )
+        return {"accessory_id": accessory_id, "status": "ready"}
+    except Exception as exc:
+        mongo.accessories.update_one(
+            {"_id": oid},
+            {
+                "$set": {
+                    "status": "failed",
+                    "error_code": type(exc).__name__,
+                    "updated_at": datetime.now(timezone.utc),
+                }
+            },
         )
         raise

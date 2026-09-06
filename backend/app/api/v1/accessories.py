@@ -5,6 +5,7 @@ from fastapi.responses import StreamingResponse
 from app.core.database import db
 from app.core.security import validate_csrf, verified_user
 from app.services.storage import get_object, normalize_image, put_image, remove_object
+from app.services.tasks import publish_accessory_background_removal
 
 router = APIRouter(prefix="/accessories", tags=["accessories"])
 ACCESSORY_CATEGORIES = {
@@ -23,8 +24,10 @@ def out(d):
         "id": accessory_id,
         "name": d["name"],
         "category": d.get("category", "other"),
+        "status": d.get("status", "ready"),
+        "background_removed": d.get("background_removed", False),
         "active": d["active"],
-        "image_url": f"/api/v1/accessories/{accessory_id}/image" if d.get("image_key") and d.get("image_key") != "pending" else None,
+        "image_url": f"/api/v1/accessories/{accessory_id}/image?v={d.get('status', 'ready')}" if d.get("image_key") and d.get("image_key") != "pending" else None,
     }
 
 
@@ -53,6 +56,9 @@ async def create(name: str = Form(...), category: str = Form("other"), image: Up
         "name": name.strip(),
         "category": category,
         "image_key": "pending",
+        "cutout_key": None,
+        "status": "uploaded",
+        "background_removed": False,
         "active": True,
         "created_at": datetime.now(timezone.utc),
         "created_by": user["_id"],
@@ -60,6 +66,18 @@ async def create(name: str = Form(...), category: str = Form("other"), image: Up
     result = await db.accessories.insert_one(doc)
     key = put_image(f"users/{user['_id']}/accessories/{result.inserted_id}", content)
     await db.accessories.update_one({"_id": result.inserted_id}, {"$set": {"image_key": key}})
+    try:
+        task_id = publish_accessory_background_removal(str(result.inserted_id))
+        await db.accessories.update_one(
+            {"_id": result.inserted_id},
+            {"$set": {"background_task_id": task_id}},
+        )
+    except Exception:
+        await db.accessories.update_one(
+            {"_id": result.inserted_id},
+            {"$set": {"status": "failed", "error_code": "BACKGROUND_ENQUEUE_FAILED"}},
+        )
+        raise HTTPException(503, "Aksesuar arka plan işlemi başlatılamadı")
     doc["_id"] = result.inserted_id
     return out(doc)
 
@@ -84,8 +102,12 @@ async def get_accessory_image(accessory_id: str, user=Depends(verified_user)):
         raise HTTPException(404, "Görsel bulunamadı")
 
     try:
-        response = get_object(accessory["image_key"])
-        return StreamingResponse(response.stream(32 * 1024), media_type="image/webp")
+        image_key = accessory.get("cutout_key") or accessory["image_key"]
+        response = get_object(image_key)
+        return StreamingResponse(
+            response.stream(32 * 1024),
+            media_type="image/png" if accessory.get("cutout_key") else "image/webp",
+        )
     except Exception as exc:
         raise HTTPException(404, "Görsel nesnesi bulunamadı") from exc
 

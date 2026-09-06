@@ -16,6 +16,10 @@ export function useAccessories() {
   const accessories = useQuery({
     queryKey: ["accessories"],
     queryFn: () => api.get<AccessoryItem[]>("/accessories").then((response) => response.data.map(normalizeAccessory)),
+    refetchInterval: (query) =>
+      query.state.data?.some((item) => item.status === "uploaded" || item.status === "background_removal")
+        ? 1500
+        : false,
   });
 
   const addAccessory = useMutation({

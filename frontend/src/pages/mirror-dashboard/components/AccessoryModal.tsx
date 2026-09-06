@@ -45,7 +45,7 @@ export default function AccessoryModal({items,tab,name,category,file,previewUrl,
                 <div className="mgmt-item-visual">
                   {item.imageUrl?<img src={item.imageUrl} alt={item.name} className="mgmt-item-thumb accessory-mgmt-thumb" />:<Gem size={24} />}
                 </div>
-                <div className="mgmt-item-info"><b>{item.name}</b><small>{accessoryCategoryName[item.category??"other"]||"Diğer"}</small></div>
+                <div className="mgmt-item-info"><b>{item.name}</b><small>{item.status === "background_removal" ? "Arka plan kaldırılıyor..." : accessoryCategoryName[item.category??"other"]||"Diğer"}</small></div>
                 <button type="button" className="mgmt-delete-btn" title="Aksesuarı Kaldır" onClick={()=>onRemove(item.id)}><Trash2 size={15} /></button>
               </div>
             ))}

@@ -27,3 +27,12 @@ def publish_garment_background_removal(garment_id: str) -> str:
         queue="preprocessing",
     )
     return task.id
+
+
+def publish_accessory_background_removal(accessory_id: str) -> str:
+    task = celery_client.send_task(
+        "accessory.remove_background",
+        kwargs={"accessory_id": accessory_id},
+        queue="preprocessing",
+    )
+    return task.id
