@@ -61,6 +61,16 @@ export default function MirrorDashboard({ user }: { user: User }) {
   );
 
   const visibleGarments = useMemo(() => (garments.data ?? []).filter((garment) => !!garment.image_url), [garments.data]);
+  const recommendedGarments = useMemo(() => {
+    const shuffled = [...visibleGarments];
+
+    for (let index = shuffled.length - 1; index > 0; index -= 1) {
+      const randomIndex = Math.floor(Math.random() * (index + 1));
+      [shuffled[index], shuffled[randomIndex]] = [shuffled[randomIndex], shuffled[index]];
+    }
+
+    return shuffled.slice(0, 3);
+  }, [visibleGarments]);
   const accessoryItems = useMemo(() => (accessories.data ?? []).map(normalizeAccessory), [accessories.data]);
   const basePersonImage = readyImages[0];
   const processingImage = images.data?.find((image) => image.status === "uploaded" || image.status === "background_removal");
@@ -81,10 +91,10 @@ export default function MirrorDashboard({ user }: { user: User }) {
       setSelectedGarment("");
       return;
     }
-    if (!selectedGarment || !visibleGarments.some((garment) => garment.id === selectedGarment)) {
-      setSelectedGarment(visibleGarments[0].id);
+    if (!selectedGarment || !recommendedGarments.some((garment) => garment.id === selectedGarment)) {
+      setSelectedGarment(recommendedGarments[0].id);
     }
-  }, [visibleGarments, selectedGarment]);
+  }, [recommendedGarments, selectedGarment]);
 
   useEffect(() => {
     if (activeJob?.status === "completed" && activeJob.has_result) setMirrorView("result");
@@ -266,7 +276,7 @@ export default function MirrorDashboard({ user }: { user: User }) {
           />
 
           <WardrobePanel
-            garments={visibleGarments}
+            garments={recommendedGarments}
             selectedGarment={selectedGarment}
             basePersonImage={basePersonImage}
             isTryingOn={createTryOn.isPending}

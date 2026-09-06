@@ -53,12 +53,13 @@ export function MirrorStage({ personInput, person, basePersonImage, activeJob, m
 
       {activeJob?.status === "failed" && <div className="mirror-progress-badge error-toast">Kombin hazırlanırken bir hata oluştu.</div>}
 
+      {activeJob?.has_result && (
+        <button type="button" className="glass-pill-toggle result-view-toggle" onClick={() => onMirrorViewChange(mirrorView === "result" ? "base" : "result")}>
+          {mirrorView === "result" ? <><RotateCcw size={14} /> Orijinale dön</> : <><Eye size={14} /> Sonucu göster</>}
+        </button>
+      )}
+
       <div className="mirror-bottom-bar">
-        {activeJob?.has_result && (
-          <button type="button" className="glass-pill-toggle" onClick={() => onMirrorViewChange(mirrorView === "result" ? "base" : "result")}>
-            {mirrorView === "result" ? <><RotateCcw size={14} /> Orijinale dön</> : <><Eye size={14} /> Sonucu göster</>}
-          </button>
-        )}
         <div className="mic-controls-cluster">
           <button type="button" className="sub-ctrl-btn" title="Fotoğraf Yükle" onClick={openFilePicker}><Camera size={18} /></button>
           <button type="button" className="master-mic-btn" title="Sesli Asistan"><div className="mic-outer-ring" /><div className="mic-inner-core"><Mic size={24} /></div></button>

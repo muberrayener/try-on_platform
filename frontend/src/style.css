@@ -515,7 +515,8 @@ button,input,select{font:inherit}
   inset: 0;
   display: flex;
   justify-content: center;
-  align-items: flex-end;
+  align-items: flex-start;
+  padding-top: 18px;
   overflow: hidden;
   pointer-events: none;
 }
@@ -524,7 +525,7 @@ button,input,select{font:inherit}
   max-width: 96%;
   max-height: 92%;
   object-fit: contain;
-  object-position: center bottom;
+  object-position: center top;
   filter: drop-shadow(0 30px 45px rgba(0, 0, 0, 0.8));
   transition: opacity .4s ease, transform .4s ease;
 }
@@ -649,6 +650,12 @@ button,input,select{font:inherit}
 .glass-pill-toggle:hover{
   background: var(--gold-accent);
   color: #1c130b;
+}
+.result-view-toggle{
+  position: absolute;
+  top: 76px;
+  right: 18px;
+  z-index: 35;
 }
 
 .mic-controls-cluster{
@@ -1194,6 +1201,7 @@ button,input,select{font:inherit}
     padding: 14px 20px;
   }
   .mirror-stage-center{order:-1;min-height:480px}
+  .result-view-toggle{top:64px;right:12px}
 }
 
 .lipstick-gallery-grid{
