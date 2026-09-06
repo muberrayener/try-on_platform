@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from bson import ObjectId
 from celery import Task
 from minio import Minio
-from PIL import Image, ImageDraw
+from PIL import Image
 from pymongo import MongoClient
 from worker.celery_app import celery_app
 from worker.background import (
@@ -29,18 +29,17 @@ def process_tryon(self: Task, job_id: str):
     job = mongo.tryon_jobs.find_one_and_update({"_id": oid, "status": "queued"}, {"$set": {"status": "preprocessing", "progress": 10, "started_at": datetime.now(timezone.utc)}})
     if not job: return {"ignored": True}
     try:
-        person = Image.open(io.BytesIO(download(job["person_key"]))).convert("RGB")
-        garment = Image.open(io.BytesIO(download(job["garment_key"]))).convert("RGB")
+        person = Image.open(io.BytesIO(download(job["person_key"]))).convert("RGBA")
+        garment = Image.open(io.BytesIO(download(job["garment_key"]))).convert("RGBA")
         mongo.tryon_jobs.update_one({"_id": oid}, {"$set": {"status": "running", "progress": 40}})
         time.sleep(2)
         # Güvenli entegrasyon iskeleti: gerçek VTON pipeline'ı bu blokla değiştirilir.
-        garment.thumbnail((person.width // 3, person.height // 3))
-        canvas = person.copy(); canvas.paste(garment, (20, 20))
-        ImageDraw.Draw(canvas).rectangle((10, 10, 360, 70), fill=(20, 20, 20))
-        ImageDraw.Draw(canvas).text((24, 28), "MOCK TRY-ON - MODEL BAGLANMADI", fill=(255, 255, 255))
-        out = io.BytesIO(); canvas.save(out, "WEBP", quality=90); payload = out.getvalue()
-        result_key = f"users/{job['user_id']}/tryons/{oid}/result.webp"
-        minio.put_object(bucket, result_key, io.BytesIO(payload), len(payload), content_type="image/webp")
+        garment.thumbnail((max(1, person.width // 3), max(1, person.height // 3)))
+        canvas = person.copy()
+        canvas.alpha_composite(garment, (20, 20))
+        out = io.BytesIO(); canvas.save(out, "PNG", optimize=True); payload = out.getvalue()
+        result_key = f"users/{job['user_id']}/tryons/{oid}/result.png"
+        minio.put_object(bucket, result_key, io.BytesIO(payload), len(payload), content_type="image/png")
         mongo.tryon_jobs.update_one({"_id": oid}, {"$set": {"status": "completed", "progress": 100, "result_key": result_key, "completed_at": datetime.now(timezone.utc)}})
         return {"job_id": job_id, "status": "completed"}
     except Exception as exc:

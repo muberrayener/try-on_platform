@@ -38,8 +38,10 @@ async def create(body: CreateTryOn, user=Depends(verified_user)):
         "active": True
     })
     if not person or not garment: raise HTTPException(404, "Fotoğraf veya kıyafet bulunamadı")
+    if not garment.get("cutout_key") or garment.get("status") != "ready":
+        raise HTTPException(409, "Kıyafetin arka planı henüz kaldırılmadı")
     doc = {"user_id": user["_id"], "person_image_id": person_id, "garment_id": garment_id,
-           "person_key": person["original_key"], "garment_key": garment["image_key"], "category": garment["category"],
+           "person_key": person["cutout_key"], "garment_key": garment["cutout_key"], "category": garment["category"],
            "status": "queued", "progress": 0, "created_at": datetime.now(timezone.utc)}
     result = await db.tryon_jobs.insert_one(doc)
     try: task_id = publish_tryon(str(result.inserted_id))
@@ -82,4 +84,4 @@ async def result(job_id: str, user=Depends(verified_user)):
         try:
             while chunk := obj.read(64 * 1024): yield chunk
         finally: obj.close(); obj.release_conn()
-    return StreamingResponse(stream(), media_type="image/webp", headers={"Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff"})
+    return StreamingResponse(stream(), media_type="image/png", headers={"Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff"})
